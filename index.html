@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enzyme Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/3dmol@2.5.5/build/3Dmol-min.js"></script>
+<style>
+  :root{
+    --bg:#f5f6f8; --surface:#ffffff; --soft:#eef0f4; --text:#1f2430; --muted:#7a8191;
+    --accent:#3b5bfd; --accent-soft:#e8edff; --line:#eceef2; --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:14px}
+  .app{max-width:1400px;margin:0 auto;padding:28px 28px 40px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:42px;height:42px;border-radius:12px;background:var(--accent);display:grid;place-items:center}
+  .logo svg{width:22px;height:22px}
+  .logo svg path,.logo svg circle{stroke:#fff}
+  h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+
+  .tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--soft)}
+  .tab{border:0;background:transparent;font:inherit;font-weight:600;color:var(--muted);padding:9px 20px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--text);background:var(--surface)}
+  .badge{min-width:22px;padding:2px 7px;border-radius:999px;font-size:11px;background:var(--accent);color:#fff;text-align:center}
+
+  .panel{border-radius:var(--r);background:var(--surface);padding:22px}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .search{flex:1;min-width:220px;display:flex;align-items:center;gap:10px;padding:0 14px;border-radius:10px;background:var(--soft)}
+  .search:focus-within{background:var(--surface);outline:2px solid var(--accent)}
+  .search input{flex:1;border:0;outline:0;background:transparent;font:inherit;padding:11px 0;color:var(--text)}
+  .btn{border:0;font:inherit;font-weight:600;color:var(--text);background:var(--soft);padding:10px 16px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .btn:hover{background:#e3e6ec}
+  .btn.on{background:var(--accent-soft);color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{background:#2f4ee6}
+  .seg{display:flex;padding:4px;gap:4px;border-radius:12px;background:var(--soft)}
+  .seg .btn{background:transparent;padding:8px 14px;color:var(--muted)}
+  .seg .btn:hover{color:var(--text)}
+  .seg .btn.on{background:var(--surface);color:var(--text)}
+  select{font:inherit;border:0;outline:0;background:var(--soft);color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+  .count{color:var(--muted);font-size:12.5px}
+
+  .tablewrap{border-radius:10px;max-height:calc(100vh - 260px);min-height:300px;overflow:auto}
+  table{border-collapse:separate;border-spacing:0;table-layout:fixed}
+  .rz{position:absolute;top:0;right:-4px;width:9px;height:100%;cursor:col-resize;z-index:3}
+  .rz::after{content:'';position:absolute;left:4px;top:25%;height:50%;width:1px;background:transparent;transition:.15s}
+  th:hover .rz::after{background:#d5d9e1}
+  .rz:hover::after,.rz.active::after{background:var(--accent)!important;width:2px}
+  body.resizing{cursor:col-resize;user-select:none}
+  th{position:sticky;top:0;background:var(--surface);z-index:2;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:12px;cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  th:hover{color:var(--text)}
+  th .arr{opacity:.35;margin-left:4px}
+  th.sorted{color:var(--text)}
+  th.sorted .arr{opacity:1;color:var(--accent)}
+  td{padding:10px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  tbody tr td:first-child{border-radius:8px 0 0 8px}
+  tbody tr td:last-child{border-radius:0 8px 8px 0}
+  tr.sel td{background:#f5f7ff}
+  tbody tr:hover td{background:var(--bg)}
+  td.num{font-variant-numeric:tabular-nums;text-align:right}
+  th.num{text-align:right}
+  .ec{font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 8px;border-radius:6px;background:var(--soft)}
+  .cls{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
+  .seq{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
+  .org{font-style:italic;color:var(--muted)}
+
+  .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;font-weight:700;color:var(--muted)}
+  .chk input{display:none}
+  .chk .box{width:20px;height:20px;border-radius:6px;background:var(--soft);display:grid;place-items:center;transition:.15s}
+  .chk:hover .box{background:#e0e4eb}
+  .chk .box svg{width:12px;height:12px;opacity:0;transition:.15s}
+  .chk input:checked + .box{background:var(--accent)}
+  .chk input:checked + .box svg{opacity:1}
+  .chk input:checked ~ span{color:var(--accent)}
+
+  .viewer-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .stage{position:relative;border-radius:12px;background:var(--bg);overflow:hidden}
+  #gridHost,#overlayHost{position:relative;width:100%}
+  #overlayHost{height:calc(100vh - 250px);min-height:420px}
+  .tile-label{position:absolute;pointer-events:none;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--text);
+    background:var(--surface);border-radius:8px;margin:10px;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tile-label small{display:block;font-family:'JetBrains Mono',monospace;color:var(--muted);font-weight:400;font-size:10.5px}
+  .tile-sep{position:absolute;pointer-events:none;border:3px solid var(--surface)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .chip{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:var(--soft);cursor:pointer;font-size:12px;font-weight:500;user-select:none;transition:.15s}
+  .chip:hover{background:#e3e6ec}
+  .chip .dot{width:10px;height:10px;border-radius:50%}
+  .chip.off{opacity:.45}
+  .chip.off .dot{background:#b9bfca!important}
+  .empty{padding:80px 20px;text-align:center;color:var(--muted)}
+  .empty b{display:block;font-size:16px;color:var(--text);margin-bottom:6px}
+  .hidden{display:none!important}
+  .note{font-size:11.5px;color:var(--muted);margin-top:14px}
+  .mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+  .anc{border:0;background:transparent;width:28px;height:28px;border-radius:8px;cursor:pointer;color:#a3a9b6;display:grid;place-items:center;padding:0}
+  .anc svg{width:16px;height:16px}
+  .anc:hover{background:var(--soft);color:var(--text)}
+  .anc.on{background:#fff1db;color:#d97706}
+  tr.anc-row td{background:#fffaf1}
+  .srcb{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px}
+  .srcb.real{background:#e8f6ee;color:#1f8a4c}
+  .srcb.gen{background:#f1ebff;color:#7c3aed}
+  th.rcol{color:#c26a00;text-align:left;padding-left:8px}
+  .xcol{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;margin:0 4px 0 0;padding:1px 5px;border-radius:5px}
+  .xcol:hover{background:#ffe9e9;color:#e5484d}
+  .rbar{display:inline-block;width:34px;height:5px;border-radius:3px;background:var(--soft);margin-right:8px;vertical-align:middle;overflow:hidden}
+  .rbar i{display:block;height:100%;border-radius:3px}
+  .dd{position:relative}
+  .pop{position:absolute;top:calc(100% + 6px);left:0;z-index:20;background:var(--surface);border-radius:12px;box-shadow:0 12px 32px rgba(20,25,40,.14);padding:8px;width:264px;max-height:min(560px,70vh);overflow:auto}
+  .pop .head{display:flex;justify-content:space-between;align-items:center;padding:6px 8px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .pop .head a{color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;margin-left:12px;font-size:12px}
+  .pop .colrow{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;font-size:13px;font-weight:500;cursor:grab;user-select:none}
+  .pop .colrow:active{cursor:grabbing}
+  .pop label.chk{cursor:pointer}
+  .pop .colrow:hover{background:var(--bg)}
+  .pop .colrow.dragging{opacity:.4}
+  .pop .colrow.drop-before{box-shadow:inset 0 2px 0 var(--accent)}
+  .pop .colrow.drop-after{box-shadow:inset 0 -2px 0 var(--accent)}
+  .pop .grip{cursor:grab;color:#c3c8d2;font-size:13px;line-height:1;user-select:none}
+  .pop .colrow:hover .grip{color:var(--muted)}
+  .pop .grip:active{cursor:grabbing}
+  .pop .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pop .nm.cmp{color:#c26a00}
+  .pop label.chk{padding:0}
+  .pop .sep{height:1px;background:var(--line);margin:6px 8px}
+  .seg .cnt,.btn .cnt{font-size:11px;color:var(--muted);margin-left:5px;font-weight:500}
+  .seg .btn .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;opacity:.35}
+  .seg .btn.on .sw{opacity:1}
+  .spacer{flex:1}
+  .stage-note{font-size:12px;color:var(--muted);width:100%;margin-bottom:2px}
+
+  /* generate button + dialog */
+  .hright{display:flex;align-items:center;gap:12px}
+  .btn.gen{background:#7c3aed;color:#fff;display:flex;align-items:center;gap:8px;padding:11px 18px;border-radius:12px}
+  .btn.gen:hover{background:#6d28d9}
+  .btn.gen svg{width:15px;height:15px}
+  .veil{position:fixed;inset:0;background:rgba(20,24,36,.36);z-index:100;display:grid;place-items:center;padding:24px}
+  .sheet{background:var(--surface);border-radius:18px;width:min(900px,100%);max-height:calc(100vh - 48px);overflow:auto;box-shadow:0 24px 64px rgba(20,25,40,.22)}
+  .sheet-h{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:22px 26px 10px}
+  .sheet-h h2{margin:0;font-size:18px}
+  .sheet-h p{margin:4px 0 0;color:var(--muted);font-size:12.5px}
+  .xbtn{border:0;background:var(--soft);width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:17px;color:var(--muted);flex:none}
+  .xbtn:hover{background:#e3e6ec;color:var(--text)}
+  .sheet-b{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:12px 26px 6px;align-items:start}
+  .sheet-b.one{grid-template-columns:1fr;max-width:460px}
+  .veil.running .card{opacity:.55;pointer-events:none}
+  .btn.gen .spin{border-color:rgba(255,255,255,.35);border-top-color:#fff}
+  .btn:disabled{opacity:.6;cursor:default}
+  @media(max-width:720px){.sheet-b{grid-template-columns:1fr}}
+  .card{background:var(--bg);border-radius:14px;padding:16px 18px}
+  .card h3{margin:0 0 2px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+  .card .tagline{color:var(--muted);font-size:11.5px;margin:0 0 14px}
+  .mdot{width:9px;height:9px;border-radius:50%;flex:none}
+  .fld{margin-bottom:14px}
+  .fld label{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:600;margin-bottom:6px;gap:10px}
+  .fld label .v{font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--accent);font-size:12px}
+  .fld .hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+  .fld select,.fld input[type=text],.fld input[type=number]{width:100%;font:inherit;font-size:13px;border:0;outline:0;background:var(--surface);color:var(--text);padding:9px 12px;border-radius:9px}
+  .fld input[type=range]{width:100%;accent-color:var(--accent);background:transparent}
+  .fld input.numin{width:96px;font-variant-numeric:tabular-nums}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .swt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;font-size:12.5px;font-weight:500}
+  .swt input{display:none}
+  .swt > label{display:block;flex:none;line-height:0}
+  .swt .track{display:block;width:38px;height:21px;border-radius:999px;background:#d7dbe3;position:relative;transition:.15s;cursor:pointer}
+  .swt .track::after{content:'';position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
+  .swt input:checked + .track{background:var(--accent)}
+  .swt input:checked + .track::after{transform:translateX(17px)}
+  .sheet-f{display:flex;align-items:center;gap:12px;padding:16px 26px 22px}
+  .sheet-f .msg{font-size:12px;color:var(--muted);flex:1}
+  .prog{height:6px;border-radius:3px;background:var(--soft);overflow:hidden;margin:0 26px 16px}
+  .prog i{display:block;height:100%;width:0;background:#7c3aed;border-radius:3px;transition:width .25s}
+  .pend{color:#b9bfca}
+  .st{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .st.ok{color:#1f8a4c}
+  .st.none{color:#9aa1b0;font-weight:500}
+  .st.gen2{color:var(--accent)}
+  td.rcell{text-align:left;font-variant-numeric:tabular-nums}
+  td.rcell .mono{font-size:12px}
+  .sub2{color:var(--muted);font-size:11px;margin-left:6px}
+  .spin{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid #d7dbe3;border-top-color:var(--accent);animation:sp .7s linear infinite;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .warn{color:#b45309;font-size:11.5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 18c3-9 5 3 8-6s5 3 8-6"/><circle cx="4" cy="18" r="1.4"/><circle cx="20" cy="6" r="1.4"/></svg></div>
+      <div><h1>Enzyme Explorer</h1><div class="sub" id="subtitle">Mock dataset · synthetic structures</div></div>
+    </div>
+    <div class="hright">
+      <button class="btn gen" id="genBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg>
+        Generate
+      </button>
+      <nav class="tabs">
+        <button class="tab active" data-tab="table">Table</button>
+        <button class="tab" data-tab="3d">3D <span class="badge" id="selBadge">0</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- TABLE -->
+  <section id="tab-table" class="panel">
+    <div class="toolbar">
+      <label class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a8191" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" placeholder="Search name, ID, EC number, organism, sequence…">
+      </label>
+      <select id="ecFilter">
+        <option value="">All EC classes</option>
+        <option value="1">EC 1 · Oxidoreductases</option>
+        <option value="2">EC 2 · Transferases</option>
+        <option value="3">EC 3 · Hydrolases</option>
+        <option value="4">EC 4 · Lyases</option>
+        <option value="5">EC 5 · Isomerases</option>
+        <option value="6">EC 6 · Ligases</option>
+        <option value="7">EC 7 · Translocases</option>
+      </select>
+      <select id="stFilter" title="Filter by structure status">
+        <option value="">Any structure status</option>
+        <option value="struct">Has structure</option>
+        <option value="nostruct">No structure</option>
+        <option value="pending">Pending (generating / folding)</option>
+      </select>
+      <div class="seg" id="srcSeg">
+        <button class="btn on" data-src="real"><span class="sw" style="background:#1f8a4c"></span>Reference<span class="cnt" id="cntReal"></span></button>
+        <button class="btn on" data-src="gen"><span class="sw" style="background:#7c3aed"></span>Generated<span class="cnt" id="cntGen"></span></button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="dd">
+        <button class="btn" id="colBtn">Columns ▾</button>
+        <div class="pop hidden" id="colPop"></div>
+      </div>
+      <button class="btn hidden" id="clearRmsd">Remove comparison columns</button>
+      <span class="count hidden" id="alnStat"></span>
+      <span class="count" id="anchorHint">Tip: click ⚓ on a row to compare every shown entry against it.</span>
+      <div class="spacer"></div>
+      <button class="btn" id="selVisible">Select all <span class="cnt" id="selAllN"></span></button>
+      <button class="btn" id="clearSel">Clear selection</button>
+      <button class="btn primary" id="goto3d">View in 3D →</button>
+    </div>
+    <div class="tablewrap">
+      <table id="tbl">
+        <colgroup id="cols"></colgroup>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="note"><span id="rowCount"></span> · All values are synthetic and for UI demonstration only.</div>
+  </section>
+
+  <!-- 3D -->
+  <section id="tab-3d" class="panel hidden">
+    <div class="viewer-head">
+      <div class="seg" id="modeSeg">
+        <button class="btn on" data-mode="grid">▦ Grid</button>
+        <button class="btn" data-mode="overlay">◎ Overlay</button>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span class="count" id="selInfo"></span>
+        <select id="styleSel">
+          <option value="cartoon">Cartoon</option>
+          <option value="trace">Cα trace</option>
+          <option value="sphere">Cα spheres</option>
+        </select>
+        <button class="btn" id="spinBtn">⟳ Spin</button>
+        <button class="btn" id="resetBtn">Reset view</button>
+      </div>
+    </div>
+    <div class="stage">
+          <div id="emptyMsg" class="empty"><b>No structures selected</b>Tick the “3D” box on rows that have a structure. Sequence-only entries must be folded first.</div>
+      <div id="gridHost"></div>
+      <div id="overlayHost" class="hidden"></div>
+    </div>
+    <div class="legend hidden" id="legend"></div>
+  </section>
+</div>
+
+<!-- GENERATE DIALOG -->
+<div class="veil hidden" id="genVeil">
+  <div class="sheet" role="dialog" aria-label="Generate enzymes">
+    <div class="sheet-h">
+      <div>
+        <h2 id="sheetTitle">Generate enzyme candidates</h2>
+        <p id="sheetSub">Sample new sequences, then fold them into structures. Parameters below are mock values for UI demonstration.</p>
+      </div>
+      <button class="xbtn" id="genClose" title="Close">×</button>
+    </div>
+
+    <div class="sheet-b" id="sheetBody">
+      <!-- sequence generation -->
+      <div class="card" id="cardSeq">
+        <h3><span class="mdot" style="background:#7c3aed"></span>Sequence generation</h3>
+        <p class="tagline">ZymCTRL — autoregressive, conditioned on EC number</p>
+
+        <div class="fld">
+          <label for="gModel">Checkpoint</label>
+          <select id="gModel">
+            <option>ProtGen-XL · 1.2B</option>
+            <option>FoldDiff-2 · 640M</option>
+            <option>SeqFlow · 340M</option>
+            <option>EnzymeLM · 2.8B</option>
+          </select>
+        </div>
+
+        <div class="fld">
+          <label for="gScaffold">Scaffold from</label>
+          <select id="gScaffold"></select>
+          <div class="hint" id="gScaffoldHint"></div>
+        </div>
+
+        <div class="fld">
+          <label for="gSteps">Max sequence length <span class="v" id="vSteps">400</span></label>
+          <input type="range" id="gSteps" min="80" max="1024" step="8" value="400">
+          <div class="hint">Upper bound on generated length; sampling stops at the end token.</div>
+        </div>
+
+        <div class="row2">
+          <div class="fld">
+            <label for="gTemp">Temperature <span class="v" id="vTemp">1.00</span></label>
+            <input type="range" id="gTemp" min="0.1" max="2" step="0.05" value="1">
+          </div>
+          <div class="fld">
+            <label for="gDiv">Mutation rate <span class="v" id="vDiv">25%</span></label>
+            <input type="range" id="gDiv" min="2" max="60" step="1" value="25">
+          </div>
+        </div>
+
+        <div class="fld">
+          <label for="gMotif">Conserved motif</label>
+          <input type="text" id="gMotif" value="GXSXG" spellcheck="false">
+          <div class="hint">Residues constrained during sampling.</div>
+        </div>
+
+        <div class="fld">
+          <label for="gN">Candidates to generate <span class="v" id="vN">8</span></label>
+          <input type="range" id="gN" min="1" max="40" step="1" value="8">
+        </div>
+
+      </div>
+
+      <!-- structure folding -->
+      <div class="card" id="cardFold">
+        <h3><span class="mdot" style="background:#0ea5e9"></span>Structure folding</h3>
+        <p class="tagline">Predicts coordinates for each sampled sequence</p>
+
+        <div class="swt" id="autoSwt" style="padding-top:0">Fold after generation
+          <label><input type="checkbox" id="fAutoOn" checked><span class="track"></span></label>
+        </div>
+        <div class="hint" id="fAutoHint" style="margin:2px 0 14px"></div>
+
+        <div id="foldParams">
+        <div class="swt" id="topkSwt" style="padding-top:0">Only fold the best candidates
+          <label><input type="checkbox" id="fTopKOn" checked><span class="track"></span></label>
+        </div>
+        <div class="fld" id="fldTopKWrap">
+          <label for="fTopK">How many — lowest perplexity</label>
+          <input type="number" id="fTopK" min="1" max="40" step="1" value="3" class="numin">
+        </div>
+
+        <div class="fld">
+          <label for="fModel">Checkpoint</label>
+          <select id="fModel">
+            <option>FoldNet-3 · monomer</option>
+            <option>FoldNet-3 · multimer</option>
+            <option>MiniFold · fast</option>
+          </select>
+        </div>
+
+        <div class="row2">
+          <div class="fld">
+            <label for="fRecycle">Recycles <span class="v" id="vRecycle">3</span></label>
+            <input type="range" id="fRecycle" min="0" max="12" step="1" value="3">
+          </div>
+          <div class="fld">
+            <label for="fSeeds">Seeds / seq. <span class="v" id="vSeeds">1</span></label>
+            <input type="range" id="fSeeds" min="1" max="8" step="1" value="1">
+          </div>
+        </div>
+
+        <div class="fld">
+          <label for="fMin">Min. pLDDT <span class="v" id="vMin">70</span></label>
+          <input type="range" id="fMin" min="0" max="95" step="1" value="70">
+          <div class="hint">Folds below this confidence are discarded.</div>
+        </div>
+
+        <div class="swt">Relax with force field
+          <label><input type="checkbox" id="fRelax" checked><span class="track"></span></label>
+        </div>
+        <div class="swt">Template search
+          <label><input type="checkbox" id="fTempl"><span class="track"></span></label>
+        </div>
+        <div class="swt">Compute RMSD to scaffold
+          <label><input type="checkbox" id="fRmsd" checked><span class="track"></span></label>
+        </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="prog hidden" id="genProg"><i></i></div>
+
+    <div class="sheet-f">
+      <span class="msg" id="genMsg">Estimated runtime ≈ 00:42 on 1× A100</span>
+      <button class="btn" id="genCancel">Cancel</button>
+      <button class="btn gen" id="genRun">Run generation</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   Utilities
+   ========================================================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = mulberry32(42);
+const pick = (a,r=R)=>a[Math.floor(r()*a.length)];
+const rng = (lo,hi,r=R)=>lo+(hi-lo)*r();
+const rint = (lo,hi,r=R)=>Math.floor(rng(lo,hi+1,r));
+const V = {
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]], sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],
+  mul:(a,s)=>[a[0]*s,a[1]*s,a[2]*s], dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2], len:a=>Math.hypot(a[0],a[1],a[2]),
+  norm:a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l]},
+  cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  rand:r=>V.norm([r()*2-1,r()*2-1,r()*2-1])
+};
+const centroid = P=>V.mul(P.reduce((a,b)=>V.add(a,b),[0,0,0]),1/P.length);
+const matVec = (M,v)=>[M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2], M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2], M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2]];
+function quatToMat([a,b,c,d]){
+  return [[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
+          [2*(b*c+a*d), a*a-b*b+c*c-d*d, 2*(c*d-a*b)],
+          [2*(b*d-a*c), 2*(c*d+a*b), a*a-b*b-c*c+d*d]];
+}
+function randRot(r){const q=[r()-.5,r()-.5,r()-.5,r()-.5],l=Math.hypot(...q);return quatToMat(q.map(x=>x/l))}
+
+/* Largest eigenpair of a symmetric 4x4 matrix (Jacobi) */
+function jacobiMax(A0){
+  const A=A0.map(r=>r.slice()), Vm=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]];
+  for(let sweep=0;sweep<60;sweep++){
+    let off=0; for(let p=0;p<4;p++)for(let q=p+1;q<4;q++)off+=A[p][q]*A[p][q];
+    if(off<1e-14) break;
+    for(let p=0;p<3;p++)for(let q=p+1;q<4;q++){
+      if(Math.abs(A[p][q])<1e-18) continue;
+      const th=(A[q][q]-A[p][p])/(2*A[p][q]);
+      const t=(th>=0?1:-1)/(Math.abs(th)+Math.sqrt(th*th+1)), c=1/Math.sqrt(t*t+1), s=t*c;
+      for(let k=0;k<4;k++){const kp=A[k][p],kq=A[k][q];A[k][p]=c*kp-s*kq;A[k][q]=s*kp+c*kq}
+      for(let k=0;k<4;k++){const pk=A[p][k],qk=A[q][k];A[p][k]=c*pk-s*qk;A[q][k]=s*pk+c*qk}
+      for(let k=0;k<4;k++){const kp=Vm[k][p],kq=Vm[k][q];Vm[k][p]=c*kp-s*kq;Vm[k][q]=s*kp+c*kq}
+    }
+  }
+  let m=0; for(let i=1;i<4;i++) if(A[i][i]>A[m][m]) m=i;
+  return {val:A[m][m], vec:[Vm[0][m],Vm[1][m],Vm[2][m],Vm[3][m]]};
+}
+/* Optimal superposition (Horn quaternion method) of mobile Y onto target X over first n points */
+function superpose(X,Y,n){
+  const cx=centroid(X.slice(0,n)), cy=centroid(Y.slice(0,n));
+  const S=[[0,0,0],[0,0,0],[0,0,0]]; let E=0;
+  for(let i=0;i<n;i++){
+    const x=V.sub(X[i],cx), y=V.sub(Y[i],cy); E+=V.dot(x,x)+V.dot(y,y);
+    for(let a=0;a<3;a++)for(let b=0;b<3;b++) S[a][b]+=y[a]*x[b];
+  }
+  const [[xx,xy,xz],[yx,yy,yz],[zx,zy,zz]]=S;
+  const N=[[xx+yy+zz, yz-zy, zx-xz, xy-yx],
+           [yz-zy, xx-yy-zz, xy+yx, zx+xz],
+           [zx-xz, xy+yx, -xx+yy-zz, yz+zy],
+           [xy-yx, zx+xz, yz+zy, -xx-yy+zz]];
+  const {val,vec}=jacobiMax(N);
+  return {rmsd:Math.sqrt(Math.max(0,(E-2*val)/n)), R:quatToMat(vec), cx, cy};
+}
+
+/* =========================================================
+   Mock data
+   ========================================================= */
+const ENZ = [
+ ["Alcohol dehydrogenase","1.1.1.1"],["Lactate dehydrogenase","1.1.1.27"],["Malate dehydrogenase","1.1.1.37"],["Glucose oxidase","1.1.3.4"],
+ ["Catalase","1.11.1.6"],["Cytochrome P450 BM3","1.14.14.1"],["Laccase","1.10.3.2"],["Superoxide dismutase","1.15.1.1"],["Glutathione reductase","1.8.1.7"],
+ ["Hexokinase","2.7.1.1"],["Pyruvate kinase","2.7.1.40"],["Glutathione S-transferase","2.5.1.18"],["Aspartate aminotransferase","2.6.1.1"],
+ ["DNA polymerase I","2.7.7.7"],["Transketolase","2.2.1.1"],["Adenylate kinase","2.7.4.3"],["Methionine adenosyltransferase","2.5.1.6"],
+ ["Lysozyme","3.2.1.17"],["Trypsin","3.4.21.4"],["Chymotrypsin","3.4.21.1"],["Lipase B","3.1.1.3"],["Acetylcholinesterase","3.1.1.7"],
+ ["β-Lactamase TEM-1","3.5.2.6"],["Cutinase","3.1.1.74"],["PETase","3.1.1.101"],["α-Amylase","3.2.1.1"],["Cellulase Cel7A","3.2.1.91"],["Subtilisin","3.4.21.62"],
+ ["Carbonic anhydrase II","4.2.1.1"],["Fumarase","4.2.1.2"],["Aldolase A","4.1.2.13"],["Pyruvate decarboxylase","4.1.1.1"],["RuBisCO","4.1.1.39"],["Enolase","4.2.1.11"],
+ ["Triosephosphate isomerase","5.3.1.1"],["Glucose-6-phosphate isomerase","5.3.1.9"],["Phosphoglucomutase","5.4.2.2"],["Racemase AlrA","5.1.1.1"],["Chorismate mutase","5.4.99.5"],
+ ["Glutamine synthetase","6.3.1.2"],["DNA ligase","6.5.1.1"],["Acetyl-CoA carboxylase","6.4.1.2"],["Aminoacyl-tRNA synthetase","6.1.1.1"],
+ ["ATP synthase subunit α","7.1.2.2"],["Na⁺/K⁺-ATPase","7.2.2.13"]
+];
+const ORG = ["Escherichia coli","Homo sapiens","Saccharomyces cerevisiae","Bacillus subtilis","Thermus thermophilus","Pseudomonas putida",
+ "Arabidopsis thaliana","Mus musculus","Aspergillus niger","Ideonella sakaiensis","Pyrococcus furiosus","Candida antarctica","Streptomyces coelicolor"];
+const GEN_MODELS = ["ProtGen-XL","FoldDiff-2","SeqFlow","EnzymeLM"];
+const VARIANT = ["","","", " (mutant)"," isoform 2"," variant A"," engineered"];
+const CLASS_COLOR = {1:"#5b7cfa",2:"#22b8a7",3:"#f59e0b",4:"#ef6f6c",5:"#8b5cf6",6:"#3fb950",7:"#e879b9"};
+const AA = "ACDEFGHIKLMNPQRSTVWY", AAW = [8.3,1.4,5.5,6.8,3.9,7.1,2.3,5.9,5.8,9.7,2.4,4.1,4.7,3.9,5.4,6.6,5.3,6.9,1.1,2.9];
+const AA3 = {A:"ALA",C:"CYS",D:"ASP",E:"GLU",F:"PHE",G:"GLY",H:"HIS",I:"ILE",K:"LYS",L:"LEU",M:"MET",N:"ASN",P:"PRO",Q:"GLN",R:"ARG",S:"SER",T:"THR",V:"VAL",W:"TRP",Y:"TYR"};
+function randAA(r){let s=AAW.reduce((a,b)=>a+b),x=r()*s;for(let i=0;i<20;i++){x-=AAW[i];if(x<=0)return AA[i]}return "A"}
+const PALETTE = ["#3b5bfd","#ef6f6c","#22b8a7","#f59e0b","#8b5cf6","#3fb950","#e879b9","#0ea5e9","#f97316","#14b8a6","#a855f7","#84cc16","#f43f5e","#6366f1","#eab308","#06b6d4"];
+
+// structural families: one per enzyme type, each with its own base fold
+const FAM = ENZ.map(([name,ec])=>({name, ec, ecClass:+ec.split(".")[0], baseLen:rint(140,360), seed:Math.floor(R()*1e9)}));
+
+const data = [];
+const usedIds = new Set();
+function uniqId(prefix,digits){let id;do{id=prefix+String(Math.floor(R()*10**digits)).padStart(digits,"0")}while(usedIds.has(id));usedIds.add(id);return id}
+
+// --- real entries
+for(let i=0;i<100;i++){
+  const fam = Math.floor(R()*FAM.length), F = FAM[fam], org = pick(ORG);
+  const len = F.baseLen + rint(-15,15);
+  let seq = "M"; for(let k=1;k<len;k++) seq += randAA(R);
+  data.push({
+    src:"real", fam, seed:Math.floor(R()*1e9), noise:rng(0.7,2.2),
+    uid: uniqId("MK",5), name: F.name + pick(VARIANT), ec:F.ec, ecClass:F.ecClass, org, len, seq,
+    mw: +(len*0.110).toFixed(1), pi:+rng(4.2,9.8).toFixed(2),
+    km:+Math.pow(10,rng(-2,1.3)).toFixed(3), kcat:+Math.pow(10,rng(-0.5,3.4)).toFixed(1),
+    topt: Math.round(org.match(/Thermus|Pyrococcus/)? rng(65,98) : rng(25,55)),
+    phopt:+rng(5,9.5).toFixed(1), plddt:+rng(70,97).toFixed(1),
+    status:"folded", ppl:null
+  });
+}
+// --- AI-generated entries: designed from a real parent
+const realCount = data.length;
+const designCounter = {};
+for(let i=0;i<100;i++){
+  const parent = i<3 ? data[0] : data[Math.floor(R()*realCount)];   // first few derive from entry #0 (demo)
+  const F = FAM[parent.fam], model = pick(GEN_MODELS);
+  const len = Math.max(60, parent.len + rint(-8,8)), mut = rng(0.08,0.4);
+  let seq = ""; for(let k=0;k<len;k++) seq += (k<parent.seq.length && R()>mut) ? parent.seq[k] : randAA(R);
+  seq = "M"+seq.slice(1);
+  designCounter[parent.fam] = (designCounter[parent.fam]||0)+1;
+  const jit = (v,f)=>v*Math.pow(10,rng(-f,f));
+  data.push({
+    src:"gen", fam:parent.fam, parent:parent.uid, model, identity:+(100*(1-mut)).toFixed(0),
+    seed:Math.floor(R()*1e9), noise:rng(0.25,1.4),
+    uid: uniqId("GX-",6), name: `${F.name} · design ${String(designCounter[parent.fam]).padStart(2,"0")}`,
+    ec:F.ec, ecClass:F.ecClass, org:`${model} (de novo)`, len, seq,
+    mw:+(len*0.110).toFixed(1), pi:+Math.min(11,Math.max(3.5,parent.pi+rng(-1,1))).toFixed(2),
+    km:+jit(parent.km,0.6).toFixed(3), kcat:+jit(parent.kcat,0.7).toFixed(1),
+    topt: Math.round(parent.topt + rng(-8,15)), phopt:+Math.min(10,Math.max(4,parent.phopt+rng(-1,1))).toFixed(1),
+    plddt: null, status:"seq", ppl:+rng(1.15,8.5).toFixed(2)
+  });
+}
+// most seeded designs already have a predicted structure; the rest are sequence-only
+data.filter(d=>d.src==="gen").forEach(d=>{
+  if(R() > 0.18){ d.status="folded"; d.plddt=+rng(55,94).toFixed(1); }
+});
+data.forEach((d,i)=>{d.id=i; d.sel=false; d.eff=d.kcat/d.km; d.color=PALETTE[i%PALETTE.length]});
+// preselect: entry #0 + its generated designs + two unrelated entries
+[0,11,27].forEach(i=>data[i].sel=true);
+data.filter(d=>d.parent===data[0].uid).forEach(d=>{
+  d.sel=true;
+  if(d.status!=="folded"){ d.status="folded"; d.plddt=+rng(70,94).toFixed(1); }
+});
+
+/* entry lifecycle: generating -> seq -> folding -> folded */
+const hasStruct = d => d.status==="folded";
+const isPending = d => d.status==="generating" || d.status==="folding";
+const STATUS_LABEL = {
+  generating:'<span class="st gen2"><span class="spin"></span>generating</span>',
+  seq:'<span class="st none">sequence only</span>',
+  folding:'<span class="st gen2"><span class="spin"></span>folding</span>',
+  folded:'<span class="st ok">structure</span>'
+};
+
+/* =========================================================
+   Synthetic structures
+   ========================================================= */
+function frame(d,r){let u=V.norm(V.cross(d,V.rand(r)));return [u,V.cross(d,u)]}
+function buildFold(seed, n, ecClass){
+  const r = mulberry32(seed), ca=[], ss=[]; let p=[0,0,0], dir=V.rand(r);
+  const ssBias = ecClass%2 ? 0.65 : 0.45;
+  while(ca.length<n){
+    const loopLen = 2+Math.floor(r()*5);
+    for(let i=0;i<loopLen && ca.length<n;i++){
+      const toC = ca.length ? V.norm(V.sub(centroid(ca),p)) : [0,0,0];
+      dir = V.norm(V.add(V.add(dir, V.mul(V.rand(r),1.1)), V.mul(toC, ca.length>20?0.9:0)));
+      p = V.add(p, V.mul(dir,3.8)); ca.push(p); ss.push("c");
+    }
+    if(ca.length>=n) break;
+    const c = centroid(ca);
+    dir = V.norm(V.add(V.rand(r), V.mul(V.norm(V.sub(c,p)), V.len(V.sub(c,p))>12?1.4:0.3)));
+    const [u,w] = frame(dir,r);
+    if(r()<ssBias){
+      const L = 8+Math.floor(r()*12), rad=2.3, base=V.sub(p,V.mul(u,rad));
+      for(let i=1;i<=L && ca.length<n;i++){
+        const th = i*100*Math.PI/180;
+        const q = V.add(V.add(base,V.mul(dir,1.5*i)), V.add(V.mul(u,rad*Math.cos(th)),V.mul(w,rad*Math.sin(th))));
+        ca.push(q); ss.push("h"); p=q;
+      }
+    } else {
+      const L = 4+Math.floor(r()*6);
+      for(let i=1;i<=L && ca.length<n;i++){
+        const q = V.add(V.add(p,V.mul(dir,3.3)), V.mul(u,(i%2?0.9:-0.9)));
+        ca.push(q); ss.push("e"); p=V.add(p,V.mul(dir,3.3));
+      }
+    }
+  }
+  return {ca, ss};
+}
+const famCache = {};
+const famFold = f => famCache[f] ||= buildFold(FAM[f].seed, FAM[f].baseLen+30, FAM[f].ecClass);
+// entry structure = family fold + smooth low-frequency deformation + jitter, random orientation
+function structOf(e){
+  if(e._s) return e._s;
+  const F = famFold(e.fam), r = mulberry32(e.seed), n = Math.min(e.len, F.ca.length);
+  const modes = [0,1,2,3].map(()=>({d:V.mul(V.rand(r), e.noise*rng(0.6,1.2,r)), w:rng(0.02,0.12,r), ph:r()*6.283}));
+  let ca = F.ca.slice(0,n).map((p,i)=>{
+    let q=p; for(const m of modes) q=V.add(q,V.mul(m.d,Math.sin(m.w*i+m.ph)));
+    return V.add(q, V.mul(V.rand(r), e.noise*0.15));
+  });
+  const c = centroid(ca), Rm = randRot(r);
+  ca = ca.map(p=>matVec(Rm, V.sub(p,c)));
+  return e._s = {ca, ss:F.ss.slice(0,n)};
+}
+
+function put(line,col,str){while(line.length<col-1+str.length) line+=" ";return line.slice(0,col-1)+str+line.slice(col-1+str.length)}
+const f83 = v=>v.toFixed(3).padStart(8);
+function toPDB(e, ca, ss){
+  const lines=[], n=ca.length;
+  let h=0,s=0;
+  for(let i=0;i<n;){
+    let j=i; while(j+1<n && ss[j+1]===ss[i]) j++;
+    if(ss[i]==="h" && j-i>=3){ h++;
+      let L=put("",1,"HELIX ");L=put(L,8,String(h).padStart(3));L=put(L,12,String(h).padStart(3));
+      L=put(L,16,AA3[e.seq[i]]||"ALA");L=put(L,20,"A");L=put(L,22,String(i+1).padStart(4));
+      L=put(L,28,AA3[e.seq[j]]||"ALA");L=put(L,32,"A");L=put(L,34,String(j+1).padStart(4));L=put(L,39," 1");lines.push(L);
+    } else if(ss[i]==="e" && j-i>=2){ s++;
+      let L=put("",1,"SHEET ");L=put(L,8,String(s).padStart(3));L=put(L,12,("S"+s).padStart(3));L=put(L,15," 1");
+      L=put(L,18,AA3[e.seq[i]]||"ALA");L=put(L,22,"A");L=put(L,23,String(i+1).padStart(4));
+      L=put(L,29,AA3[e.seq[j]]||"ALA");L=put(L,33,"A");L=put(L,34,String(j+1).padStart(4));L=put(L,39," 0");lines.push(L);
+    }
+    i=j+1;
+  }
+  let serial=1;
+  const atom=(name,el,res,i,xyz,b)=>{
+    let L=put("",1,"ATOM  ");L=put(L,7,String(serial++).padStart(5));L=put(L,13,name);L=put(L,18,res);L=put(L,22,"A");
+    L=put(L,23,String(i+1).padStart(4));L=put(L,31,f83(xyz[0])+f83(xyz[1])+f83(xyz[2]));L=put(L,55,"  1.00"+b.toFixed(2).padStart(6));L=put(L,77,el.padStart(2));
+    lines.push(L);
+  };
+  for(let i=0;i<n;i++){
+    const prev=ca[Math.max(0,i-1)], next=ca[Math.min(n-1,i+1)], c=ca[i];
+    const t=V.norm(V.sub(next,prev));
+    let out=V.sub(V.mul(V.add(prev,next),0.5),c); if(V.len(out)<1e-6) out=[0,0,1];
+    const side=V.norm(V.cross(t,out));
+    const res=AA3[e.seq[i]]||"ALA", b=e.plddt+Math.sin(i/7)*8;
+    atom(" N  ","N",res,i,V.add(c,V.mul(t,-1.2)),b);
+    atom(" CA ","C",res,i,c,b);
+    const C=V.add(c,V.mul(t,1.3)); atom(" C  ","C",res,i,C,b);
+    atom(" O  ","O",res,i,V.add(C,V.mul(side,1.23)),b);
+  }
+  lines.push("END");
+  return lines.join("\n");
+}
+const pdbCache = {};
+const pdbOf = e => pdbCache[e.id] ||= toPDB(e, structOf(e).ca, structOf(e).ss);
+
+/* Cα-only PDB: TM-align reads only CA atoms, so this is 4x less text to parse */
+const caCache = {};
+function pdbCaOf(e){
+  if(caCache[e.id]) return caCache[e.id];
+  const ca = structOf(e).ca, L = [];
+  for(let i=0;i<ca.length;i++){
+    const p=ca[i];
+    let x=put("",1,"ATOM  "); x=put(x,7,String(i+1).padStart(5)); x=put(x,13," CA ");
+    x=put(x,18,AA3[e.seq[i]]||"ALA"); x=put(x,22,"A"); x=put(x,23,String(i+1).padStart(4));
+    x=put(x,31,f83(p[0])+f83(p[1])+f83(p[2])); x=put(x,55,"  1.00  0.00"); x=put(x,77," C");
+    L.push(x);
+  }
+  L.push("END");
+  return caCache[e.id] = L.join("\n");
+}
+
+/* RMSD between two entries: Cα, optimal superposition, over the shared residue range */
+function rmsdBetween(a,b){
+  if(a===b) return 0;
+  const A=structOf(a).ca, B=structOf(b).ca, n=Math.min(A.length,B.length);
+  return superpose(A,B,n).rmsd;
+}
+
+/* =========================================================
+   Table
+   ========================================================= */
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
+const ANCHOR_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M7 11h10M4.5 14.5a7.5 7.5 0 0 0 15 0"/></svg>';
+const fmtEff = v => v>=1000 ? v.toExponential(1) : v.toFixed(1);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const BASE_COLS = [
+  {k:"sel", t:"3D / fold", w:92, locked:true, nosort:true,
+   cell:d=> isPending(d)
+     ? `<span class="chk" style="opacity:.45"><span class="box"></span><span>…</span></span>`
+     : `<label class="chk"><input type="checkbox" data-id="${d.id}" ${d.sel?'checked':''}><span class="box">${CHECK}</span><span>${hasStruct(d)?"3D":"Fold"}</span></label>`},
+  {k:"anchor", t:"Anchor", w:96, nosort:true,
+   cell:d=>`<button class="anc ${anchors.includes(d.id)?'on':''}" data-anchor="${d.id}" title="${anchors.includes(d.id)?'Remove':'Add'} comparison column with ${d.uid} as anchor">${ANCHOR_SVG}</button>`},
+  {k:"uid", t:"ID", w:112, cell:d=>`<span class="mono">${d.uid}</span>`},
+  {k:"src", t:"Source", w:124, cell:d=>d.src==="gen"?`<span class="srcb gen">Generated</span>`:`<span class="srcb real">Reference</span>`},
+  {k:"name", t:"Enzyme", w:250, cell:d=>`<span style="font-weight:600" title="${esc(d.name)}${d.parent?` — designed from ${d.parent} (${d.identity}% seq. identity)`:''}">${esc(d.name)}</span>`},
+  {k:"ec", t:"EC", w:120, cell:d=>`<span class="ec"><span class="cls" style="background:${CLASS_COLOR[d.ecClass]}"></span>${d.ec}</span>`},
+  {k:"org", t:"Organism / model", w:210, cell:d=>`<span class="org">${esc(d.org)}</span>`},
+  {k:"status", t:"Structure", w:140, cell:d=>STATUS_LABEL[d.status]||d.status},
+  {k:"len", t:"Length", w:90, num:true},
+  {k:"mw", t:"MW (kDa)", w:100, num:true},
+  {k:"pi", t:"pI", w:64, num:true},
+  {k:"km", t:"Km (mM)", w:96, num:true},
+  {k:"kcat", t:"kcat (s⁻¹)", w:104, num:true},
+  {k:"eff", t:"kcat/Km", w:96, num:true, val:d=>d.eff==null?Infinity:d.eff, cell:d=>d.eff==null?null:fmtEff(d.eff)},
+  {k:"topt", t:"T opt (°C)", w:104, num:true},
+  {k:"phopt", t:"pH opt", w:84, num:true},
+  {k:"plddt", t:"pLDDT", w:80, num:true,
+   val:d=>d.plddt==null?Infinity:d.plddt,
+   cell:d=>d.plddt==null?`<span class="pend">—</span>`:d.plddt},
+  {k:"ppl", t:"Perplexity", w:110, num:true,
+   val:d=>d.ppl==null?Infinity:d.ppl,
+   cell:d=>d.ppl==null?`<span class="pend">—</span>`:`<span title="ZymCTRL perplexity — lower is more confident">${d.ppl.toFixed(2)}</span>`},
+  {k:"seq", t:"Sequence", w:300, cell:d=>d.seq?`<span class="seq" title="${d.seq}">${d.seq}</span>`:`<span class="pend">…</span>`}
+];
+BASE_COLS.forEach(c=>c.w0=c.w);
+
+let anchors = [];               // entry ids used as RMSD anchors (in order added)
+const rmsdCols = {};            // id -> column def (keeps width)
+const hiddenCols = new Set();
+let sortKey="uid", sortDir=1, query="", ecF="", stF="", showSrc={real:true, gen:true};
+
+/* ---------------------------------------------------------
+   Structural alignment (TM-align / WASM) in a worker pool.
+   Alignments are computed only for rows passing the current
+   filters, and cached per (anchor, entry) pair.
+   --------------------------------------------------------- */
+const alnCache = new Map();        // "refId|entryId" -> {rmsd,tm,len,t,u} | {err}
+const alnQueued = new Set();
+const alnQueue = [];
+let alnWorkers = [], alnOff = false, alnDone = 0, alnTotal = 0, alnPaint = null;
+
+function alnKey(refId, eId){ return refId + "|" + eId }
+function alnGet(refId, eId){ return alnCache.get(alnKey(refId, eId)) }
+
+function alnInit(){
+  if(alnWorkers.length || alnOff) return;
+  const n = Math.max(1, Math.min(8, navigator.hardwareConcurrency || 2));
+  for(let i=0;i<n;i++){
+    let w;
+    try { w = new Worker('./align-worker.js', { type:'module' }); }
+    catch(err){ alnOff = true; alnWorkers = []; alnStatus(); return; }
+    w.onerror = () => { alnOff = true; alnStatus(); alnRepaint(true); };
+    w.onmessage = ev => {
+      const { key, res, err } = ev.data;
+      alnCache.set(key, err ? { err } : res);
+      w.__busy = false; alnDone++;
+      alnPump(); alnRepaint();
+    };
+    w.__busy = false;
+    alnWorkers.push(w);
+  }
+}
+function alnPump(){
+  if(alnOff) return;
+  for(const w of alnWorkers){
+    if(w.__busy || !alnQueue.length) continue;
+    const job = alnQueue.shift();
+    w.__busy = true;
+    w.postMessage({ key: job.key, mobile: pdbCaOf(data[job.e]), ref: pdbCaOf(data[job.r]) });
+  }
+  if(!alnQueue.length && alnWorkers.every(w => !w.__busy)){ alnDone = 0; alnTotal = 0; }
+  alnStatus();
+}
+function alnRequest(refId, entries){
+  alnInit();
+  if(alnOff) return;
+  let added = 0;
+  for(const e of entries){
+    if(e.id === refId) continue;
+    const key = alnKey(refId, e.id);
+    if(alnCache.has(key) || alnQueued.has(key)) continue;
+    alnQueued.add(key); alnQueue.push({ r:refId, e:e.id, key }); added++;
+  }
+  if(added){ alnTotal += added; alnPump(); }
+}
+function alnStatus(){
+  const el = document.getElementById("alnStat"); if(!el) return;
+  const busy = alnTotal > 0;
+  el.classList.toggle("hidden", !busy && !alnOff);
+  if(alnOff){ el.innerHTML = `<span class="warn">Structural alignment unavailable — showing index-based RMSD.</span>`; return; }
+  if(busy) el.innerHTML = `<span class="spin"></span> Aligning ${alnDone}/${alnTotal}…`;
+}
+function alnRepaint(now){
+  if(now){ renderBody(); return }
+  if(alnPaint) return;
+  alnPaint = setTimeout(() => { alnPaint = null; renderBody(); }, 350);
+}
+/* alignments needed by the rows currently on screen */
+function alnTopUp(rows){
+  if(!anchors.length || alnOff) return;
+  const withStruct = rows.filter(hasStruct);
+  anchors.forEach(id => { if(hasStruct(data[id])) alnRequest(id, withStruct) });
+}
+
+function tmColor(t){ return t>=0.8 ? "#1f9d55" : t>=0.5 ? "#3b5bfd" : t>=0.3 ? "#f59e0b" : "#c3c8d2" }
+function makeRmsdCol(id){
+  const a=data[id], k="rmsd_"+id;
+  return {k, t:`Similarity → ${a.uid}`, w:232, w0:232, rmsd:id, cls:"rcell",
+    /* ranked by TM-score (length-independent); stored as 1-TM so ascending = most similar first */
+    val:d=>{
+      if(d.id===id) return -1;
+      if(!hasStruct(d)) return Infinity;
+      if(alnOff) return rmsdBetween(a,d);
+      const r=alnGet(id,d.id);
+      return (r && !r.err) ? 1-r.tm : Infinity;
+    },
+    cell:d=>{
+      if(d.id===id) return `<span class="mono" style="color:#c26a00">anchor</span>`;
+      if(!hasStruct(d)) return `<span class="pend">no structure</span>`;
+      if(alnOff){ const v=rmsdBetween(a,d); return `<span class="mono">${v.toFixed(2)} Å</span><span class="sub2">by index</span>` }
+      const r=alnGet(id,d.id);
+      if(!r) return `<span class="pend">…</span>`;
+      if(r.err) return `<span class="pend" title="${esc(r.err)}">n/a</span>`;
+      return `<span class="rbar" title="TM-score ${r.tm.toFixed(3)}"><i style="width:${Math.round(r.tm*100)}%;background:${tmColor(r.tm)}"></i></span>`
+           + `<span class="mono">TM ${r.tm.toFixed(2)}</span>`
+           + `<span class="sub2" title="Cα RMSD over ${r.len} structurally aligned residues">${r.rmsd.toFixed(2)} Å · ${r.len} aa</span>`;
+    }};
+}
+const COL_BY_KEY = {};
+BASE_COLS.forEach(c => COL_BY_KEY[c.k] = c);
+let colOrder = BASE_COLS.map(c => c.k);          // user-reorderable
+function allCols(){ return colOrder.map(k => COL_BY_KEY[k]).filter(Boolean); }
+function moveCol(key, target, before){
+  if(key===target) return;
+  const arr = colOrder.filter(k => k!==key);
+  const at = arr.indexOf(target);
+  if(at < 0) return;
+  arr.splice(before ? at : at+1, 0, key);
+  // locked columns always stay in front
+  colOrder = [...arr.filter(k=>COL_BY_KEY[k]&&COL_BY_KEY[k].locked), ...arr.filter(k=>!COL_BY_KEY[k]||!COL_BY_KEY[k].locked)];
+}
+const visCols = ()=>allCols().filter(c=>!hiddenCols.has(c.k));
+
+function addAnchor(id){
+  if(anchors.includes(id)) return removeAnchor(id);
+  const k="rmsd_"+id;
+  rmsdCols[id] = rmsdCols[id] || makeRmsdCol(id);
+  COL_BY_KEY[k] = rmsdCols[id];
+  if(!colOrder.includes(k)){
+    const at = colOrder.indexOf("name");
+    colOrder.splice(at<0 ? colOrder.length : at+1, 0, k);
+  }
+  anchors.push(id); hiddenCols.delete(k);
+  sortKey=k; sortDir=1;
+  refreshTable();
+}
+function removeAnchor(id){
+  const k="rmsd_"+id;
+  anchors = anchors.filter(x=>x!==id); hiddenCols.delete(k);
+  colOrder = colOrder.filter(x=>x!==k); delete COL_BY_KEY[k];
+  if(sortKey===k){sortKey="uid";sortDir=1}
+  refreshTable();
+}
+function clearAnchors(){ [...anchors].forEach(removeAnchor) }
+
+function applyWidths(){
+  const vc=visCols();
+  document.getElementById("cols").innerHTML = vc.map(c=>`<col style="width:${c.w}px">`).join("");
+  document.getElementById("tbl").style.width = vc.reduce((a,c)=>a+c.w,0)+"px";
+}
+function renderHead(){
+  document.getElementById("thead").innerHTML = visCols().map(c=>{
+    const sorted = sortKey===c.k;
+    const arr = c.nosort ? "" : `<span class="arr">${sorted?(sortDir>0?'▲':'▼'):'↕'}</span>`;
+    const x = c.rmsd!==undefined ? `<button class="xcol" data-rm="${c.rmsd}" title="Remove this comparison column">×</button>` : "";
+    return `<th data-k="${c.k}" class="${c.num?'num':''} ${sorted?'sorted':''} ${c.rmsd!==undefined?'rcol':''}" title="${c.rmsd!==undefined?'TM-align vs '+data[c.rmsd].uid+' — ranked by TM-score (0-1, higher = more similar); RMSD is over the structurally aligned residues only':''}">${x}${c.t}${arr}<span class="rz" data-k="${c.k}" title="Drag to resize · double-click to reset"></span></th>`;
+  }).join("");
+  applyWidths();
+}
+function visibleRows(){
+  const q=query.toLowerCase(), Q=query.toUpperCase();
+  return data.filter(d=>showSrc[d.src] && (!ecF||d.ecClass==ecF) &&
+      (!stF || (stF==="nostruct" ? (!hasStruct(d) && !isPending(d)) : stF==="pending" ? isPending(d) : hasStruct(d))) &&
+      (!q || (d.name+" "+d.ec+" "+d.org+" "+d.uid).toLowerCase().includes(q) || (Q.length>2 && d.seq.includes(Q))))
+    .sort(sorter());
+}
+function sorter(){
+  const col = allCols().find(c=>c.k===sortKey);
+  const get = col && col.val ? col.val : d=>d[sortKey];
+  return (a,b)=>{
+    const x=get(a), y=get(b);
+    if(typeof x==="number" || typeof y==="number"){
+      const xa=Number.isFinite(x)?x:Infinity, ya=Number.isFinite(y)?y:Infinity;
+      if(xa===ya) return 0;
+      return (xa-ya)*sortDir;
+    }
+    return String(x).localeCompare(String(y),undefined,{numeric:true})*sortDir;
+  };
+}
+function renderBody(){
+  const rows=visibleRows(), vc=visCols();
+  alnTopUp(rows);
+  document.getElementById("tbody").innerHTML = rows.map(d=>
+    `<tr class="${d.sel?'sel':''} ${anchors.includes(d.id)?'anc-row':''}" data-id="${d.id}">${
+      vc.map(c=>{
+        const v = c.cell ? c.cell(d) : d[c.k];
+        const shown = (v===null || v===undefined || v==="") ? `<span class="pend">…</span>` : v;
+        return `<td class="${c.num?'num':''} ${c.cls||''}">${shown}</td>`;
+      }).join("")}</tr>`).join("");
+  updateCounts(rows.length);
+}
+function updateCounts(n){
+  n = n ?? visibleRows().length;
+  const nFold = selToFold().length, n3d = sel3D().length;
+  document.getElementById("rowCount").textContent =
+    `${n} of ${data.length} entries shown · ${n3d} with structure selected` + (nFold?` · ${nFold} awaiting folding`:"");
+  document.getElementById("selBadge").textContent = n3d;
+  const selectable = visibleRows().filter(d=>!isPending(d)).length;
+  document.getElementById("selAllN").textContent = selectable;
+  document.getElementById("selVisible").disabled = selectable===0;
+  const go = document.getElementById("goto3d");
+  if(nFold){ go.textContent = `Fold selected (${nFold}) →`; go.dataset.act = "fold"; }
+  else { go.textContent = "View in 3D →"; go.dataset.act = "view"; }
+  const nr=data.filter(d=>d.src==="real").length, ng=data.length-nr;
+  document.getElementById("cntReal").textContent = nr;
+  document.getElementById("cntGen").textContent = ng;
+  document.getElementById("subtitle").textContent = `Mock dataset · ${nr} reference + ${ng} AI-generated enzymes · synthetic structures`;
+  document.getElementById("clearRmsd").classList.toggle("hidden", !anchors.length);
+  document.getElementById("clearRmsd").textContent = `Remove comparison columns (${anchors.length})`;
+  document.getElementById("anchorHint").classList.toggle("hidden", anchors.length>0);
+}
+function refreshTable(){ renderHead(); renderBody(); renderColMenu(); }
+const selected = ()=>data.filter(d=>d.sel);
+const sel3D = ()=>data.filter(d=>d.sel && hasStruct(d));
+const selToFold = ()=>data.filter(d=>d.sel && d.status==="seq");
+
+/* header: sort, remove RMSD col, resize */
+let justResized=false;
+const thead=document.getElementById("thead");
+thead.addEventListener("click",e=>{
+  const x=e.target.closest(".xcol"); if(x){ e.stopPropagation(); removeAnchor(+x.dataset.rm); return; }
+  if(justResized || e.target.closest(".rz")) return;
+  const th=e.target.closest("th"); if(!th) return;
+  const c=allCols().find(c=>c.k===th.dataset.k); if(!c || c.nosort) return;
+  if(sortKey===c.k) sortDir*=-1; else {sortKey=c.k;sortDir=1}
+  renderHead(); renderBody();
+});
+thead.addEventListener("mousedown",e=>{
+  const h=e.target.closest(".rz"); if(!h) return;
+  e.preventDefault(); e.stopPropagation();
+  const vc=visCols(), idx=vc.findIndex(c=>c.k===h.dataset.k), col=vc[idx];
+  const x0=e.clientX, w0=col.w, colEls=document.querySelectorAll("#cols col"), tbl=document.getElementById("tbl");
+  h.classList.add("active"); document.body.classList.add("resizing");
+  const move=ev=>{ col.w=Math.max(48,Math.round(w0+ev.clientX-x0)); colEls[idx].style.width=col.w+"px"; tbl.style.width=vc.reduce((a,c)=>a+c.w,0)+"px"; };
+  const up=()=>{ h.classList.remove("active"); document.body.classList.remove("resizing"); window.removeEventListener("mousemove",move); window.removeEventListener("mouseup",up); justResized=true; setTimeout(()=>justResized=false,0); };
+  window.addEventListener("mousemove",move); window.addEventListener("mouseup",up);
+});
+thead.addEventListener("dblclick",e=>{
+  const h=e.target.closest(".rz"); if(!h) return;
+  const c=allCols().find(c=>c.k===h.dataset.k); c.w=c.w0; applyWidths();
+});
+
+/* body: 3D checkbox + anchor button */
+const tbody=document.getElementById("tbody");
+tbody.addEventListener("change",e=>{
+  if(e.target.type!=="checkbox") return;
+  const d=data[+e.target.dataset.id]; d.sel=e.target.checked;
+  e.target.closest("tr").classList.toggle("sel",d.sel);
+  updateCounts();
+});
+tbody.addEventListener("click",e=>{
+  const b=e.target.closest(".anc"); if(b) addAnchor(+b.dataset.anchor);
+});
+
+/* column menu */
+const colPop=document.getElementById("colPop");
+function renderColMenu(){
+  const cols = allCols().filter(c=>!c.locked);
+  colPop.innerHTML =
+    `<div class="head">Columns · drag to reorder<span><a data-act="all">Show all</a><a data-act="none">Hide all</a></span></div>`
+    + cols.map(c=>`<div class="colrow" data-col="${c.k}">
+        <span class="grip" title="Drag to reorder">⠿</span>
+        <label class="chk"><input type="checkbox" data-col="${c.k}" ${hiddenCols.has(c.k)?'':'checked'}><span class="box">${CHECK}</span></label>
+        <span class="nm${c.rmsd!==undefined?' cmp':''}">${c.t}</span>
+        ${c.rmsd!==undefined?`<button class="xcol" data-rm="${c.rmsd}" title="Remove this comparison column">×</button>`:''}
+      </div>`).join("")
+    + (anchors.length ? `<div class="sep"></div><div class="head"><a data-act="rmall">Remove all comparison columns</a></div>` : "");
+}
+
+/* pointer-based reordering (works inside the sandboxed frame) */
+let drag = null;
+const clearDropMarks = ()=> colPop.querySelectorAll(".drop-before,.drop-after,.dragging")
+  .forEach(x=>x.classList.remove("drop-before","drop-after","dragging"));
+const rowUnder = y => [...colPop.querySelectorAll(".colrow")].find(r=>{
+  const b=r.getBoundingClientRect(); return y>=b.top && y<=b.bottom;
+});
+colPop.addEventListener("mousedown", e=>{
+  const row = e.target.closest(".colrow");
+  if(!row || e.target.closest("label, .xcol")) return;   // leave the tick box and × alone
+  e.preventDefault();
+  drag = { key: row.dataset.col, y0: e.clientY, moved:false, target:null, before:false };
+  document.addEventListener("mousemove", onDragMove);
+  document.addEventListener("mouseup", onDragEnd);
+});
+let autoTimer = null;
+function autoScroll(y){
+  const b = colPop.getBoundingClientRect();
+  const dir = y < b.top + 26 ? -1 : y > b.bottom - 26 ? 1 : 0;
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  if(dir) autoTimer = setInterval(()=>{ colPop.scrollTop += dir*9 }, 30);
+}
+function onDragMove(e){
+  if(!drag) return;
+  autoScroll(e.clientY);
+  if(!drag.moved){
+    if(Math.abs(e.clientY - drag.y0) < 4) return;
+    drag.moved = true;
+    const r = colPop.querySelector(`.colrow[data-col="${drag.key}"]`);
+    if(r) r.classList.add("dragging");
+  }
+  colPop.querySelectorAll(".drop-before,.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));
+  drag.target = null;
+  const row = rowUnder(e.clientY);
+  if(!row || row.dataset.col===drag.key) return;
+  const b = row.getBoundingClientRect();
+  drag.target = row.dataset.col;
+  drag.before = e.clientY < b.top + b.height/2;
+  row.classList.add(drag.before ? "drop-before" : "drop-after");
+}
+function onDragEnd(){
+  document.removeEventListener("mousemove", onDragMove);
+  document.removeEventListener("mouseup", onDragEnd);
+  if(autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+  const d = drag; drag = null;
+  clearDropMarks();
+  if(d && d.moved && d.target){
+    moveCol(d.key, d.target, d.before);
+    renderHead(); renderBody(); renderColMenu();
+  }
+}
+document.getElementById("colBtn").onclick=e=>{ e.stopPropagation(); renderColMenu(); colPop.classList.toggle("hidden"); };
+colPop.addEventListener("click",e=>{
+  e.stopPropagation();
+  const x=e.target.closest(".xcol");
+  if(x){ removeAnchor(+x.dataset.rm); return; }
+  const a=e.target.closest("a"); if(!a) return;
+  const act=a.dataset.act;
+  if(act==="all") hiddenCols.clear();
+  if(act==="none") allCols().forEach(c=>{ if(!c.locked) hiddenCols.add(c.k) });
+  if(act==="rmall") { clearAnchors(); return; }
+  renderHead(); renderBody(); renderColMenu();
+});
+colPop.addEventListener("change",e=>{
+  const k=e.target.dataset.col; if(!k) return;
+  if(e.target.checked) hiddenCols.delete(k); else hiddenCols.add(k);
+  renderHead(); renderBody();
+});
+document.addEventListener("click",()=>colPop.classList.add("hidden"));
+
+/* toolbar */
+document.getElementById("q").addEventListener("input",e=>{query=e.target.value.trim();renderBody()});
+document.getElementById("ecFilter").addEventListener("change",e=>{ecF=e.target.value;renderBody()});
+document.getElementById("stFilter").addEventListener("change",e=>{stF=e.target.value;renderBody()});
+document.getElementById("srcSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  showSrc[b.dataset.src]=!showSrc[b.dataset.src]; b.classList.toggle("on",showSrc[b.dataset.src]); renderBody();
+});
+document.getElementById("clearRmsd").onclick=clearAnchors;
+document.getElementById("selVisible").onclick=()=>{visibleRows().forEach(d=>{ if(!isPending(d)) d.sel=true });renderBody()};
+document.getElementById("clearSel").onclick=()=>{data.forEach(d=>d.sel=false);renderBody()};
+document.getElementById("goto3d").onclick=e=>{
+  if(e.currentTarget.dataset.act==="fold") openFoldDialog(selToFold());
+  else showTab("3d");
+};
+
+/* =========================================================
+   3D views (3Dmol.js)
+   ========================================================= */
+let mode="grid", styleName="cartoon", spinning=false;
+let gridViewers=[], overlayViewer=null, hiddenIds=new Set(), ovTimer=null;
+
+function styleFor(color, spectrum){
+  const c = spectrum ? {colorscheme:{prop:"resi",gradient:"roygb",min:1,max:450}} : {color};
+  if(styleName==="cartoon") return {cartoon:{...c, thickness:0.6, arrows:true}};
+  if(styleName==="trace")   return {cartoon:{...c, style:"trace", thickness:0.35}};
+  return {sphere:{...c, radius:1.5}};
+}
+const selFor = ()=> styleName==="sphere" ? {atom:"CA"} : {};
+const srcTag = e => e.src==="gen" ? ' <span class="srcb gen" style="font-size:10px;padding:1px 6px">AI</span>' : '';
+
+function buildGrid(){
+  const host=document.getElementById("gridHost"); host.innerHTML=""; gridViewers=[];
+  const sel=sel3D(); if(!sel.length) return;
+  const W = host.clientWidth || 1000;
+  const cols = Math.max(1, Math.min(sel.length, Math.floor(W/260) || 1, Math.ceil(Math.sqrt(sel.length*1.6))));
+  const rows = Math.ceil(sel.length/cols);
+  const tileW = W/cols, tileH = Math.min(320, Math.max(220, tileW*0.85));
+  host.style.height = (rows*tileH)+"px";
+  const grid = $3Dmol.createViewerGrid(host,{rows,cols,control_all:false},{backgroundColor:"#f5f6f8",antialias:true});
+  sel.forEach((e,k)=>{
+    const r=Math.floor(k/cols), c=k%cols, v=grid[r][c];
+    v.addModel(pdbOf(e),"pdb");
+    v.setStyle(selFor(), styleFor(e.color,true)); v.zoomTo(); v.render();
+    gridViewers.push(v);
+    const lab=document.createElement("div"); lab.className="tile-label";
+    lab.style.left=(c*tileW)+"px"; lab.style.top=(r*tileH)+"px"; lab.style.maxWidth=(tileW-20)+"px";
+    lab.innerHTML=`${esc(e.name)}${srcTag(e)}<small>${e.uid} · EC ${e.ec} · ${e.len} aa</small>`;
+    host.appendChild(lab);
+    const sep=document.createElement("div"); sep.className="tile-sep";
+    Object.assign(sep.style,{left:(c*tileW-1.5)+"px",top:(r*tileH-1.5)+"px",width:(tileW+3)+"px",height:(tileH+3)+"px"});
+    host.appendChild(sep);
+  });
+  if(spinning) gridViewers.forEach(v=>v.spin("y",0.6));
+}
+
+function buildOverlay(){
+  const host=document.getElementById("overlayHost"); host.innerHTML="";
+  const sel=sel3D(), leg=document.getElementById("legend"); leg.innerHTML="";
+  if(!sel.length){overlayViewer=null;return}
+  overlayViewer = $3Dmol.createViewer(host,{backgroundColor:"#f5f6f8",antialias:true});
+  const ref = sel[0], refCA = structOf(ref).ca;
+
+  // structural alignment onto the anchor; wait for it rather than drawing a wrong fit
+  if(!alnOff){
+    alnRequest(ref.id, sel);
+    const need = sel.filter(e => e!==ref && !alnGet(ref.id, e.id));
+    if(need.length){
+      leg.innerHTML = `<div class="stage-note"><span class="spin"></span> Aligning ${sel.length-1-need.length}/${sel.length-1} structures onto ${ref.uid} with TM-align…</div>`;
+      leg.classList.remove("hidden");
+      clearTimeout(ovTimer); ovTimer = setTimeout(()=>{ if(mode==="overlay") buildOverlay() }, 350);
+      return;
+    }
+  }
+  leg.insertAdjacentHTML("beforeend", `<div class="stage-note">Superposed onto <b>${ref.uid}</b> ${alnOff?"(Cα fit by residue index)":"with TM-align (structural alignment)"}. Click a chip to hide/show.</div>`);
+  sel.forEach((e,k)=>{
+    e.color = PALETTE[k%PALETTE.length];
+    const S = structOf(e); let ca = S.ca, tail = "";
+    if(e!==ref){
+      const r = alnOff ? null : alnGet(ref.id, e.id);
+      if(r && !r.err && r.u){
+        const {t,u} = r;
+        ca = ca.map(p=>[ t[0]+u[0][0]*p[0]+u[0][1]*p[1]+u[0][2]*p[2],
+                         t[1]+u[1][0]*p[0]+u[1][1]*p[1]+u[1][2]*p[2],
+                         t[2]+u[2][0]*p[0]+u[2][1]*p[1]+u[2][2]*p[2] ]);
+        tail = ` · ${r.rmsd.toFixed(2)} Å over ${r.len} aa · TM ${r.tm.toFixed(2)}`;
+      } else {
+        const n=Math.min(refCA.length, ca.length), fit=superpose(refCA, ca, n);
+        ca = ca.map(p=>V.add(matVec(fit.R, V.sub(p,fit.cy)), fit.cx));
+        tail = ` · ${fit.rmsd.toFixed(2)} Å by index`;
+      }
+    }
+    const m=overlayViewer.addModel(toPDB(e, ca, S.ss),"pdb");
+    m.setStyle(selFor(), hiddenIds.has(e.id)?{}:styleFor(e.color,false));
+    const chip=document.createElement("div"); chip.className="chip"+(hiddenIds.has(e.id)?" off":"");
+    chip.innerHTML=`<span class="dot" style="background:${e.color}"></span>${esc(e.name)}${srcTag(e)} <span style="color:var(--muted)">${e.uid}${e===ref?' · anchor':tail}</span>`;
+    chip.onclick=()=>{
+      if(hiddenIds.has(e.id)) hiddenIds.delete(e.id); else hiddenIds.add(e.id);
+      chip.classList.toggle("off");
+      m.setStyle({},{}); m.setStyle(selFor(), hiddenIds.has(e.id)?{}:styleFor(e.color,false)); overlayViewer.render();
+    };
+    leg.appendChild(chip);
+  });
+  overlayViewer.zoomTo(); overlayViewer.render();
+  if(spinning) overlayViewer.spin("y",0.6);
+}
+
+function render3D(){
+  const sel=sel3D();
+  document.getElementById("selInfo").textContent = `${sel.length} structure${sel.length===1?"":"s"}`;
+  document.getElementById("emptyMsg").classList.toggle("hidden", sel.length>0);
+  document.getElementById("gridHost").classList.toggle("hidden", mode!=="grid" || !sel.length);
+  document.getElementById("overlayHost").classList.toggle("hidden", mode!=="overlay" || !sel.length);
+  document.getElementById("legend").classList.toggle("hidden", mode!=="overlay" || !sel.length);
+  if(typeof $3Dmol==="undefined"){document.getElementById("emptyMsg").innerHTML="<b>3D library failed to load</b>3Dmol.js could not be fetched from the CDN.";document.getElementById("emptyMsg").classList.remove("hidden");return}
+  if(mode==="grid"){ document.getElementById("overlayHost").innerHTML=""; overlayViewer=null; buildGrid(); }
+  else { document.getElementById("gridHost").innerHTML=""; gridViewers=[]; buildOverlay(); }
+}
+document.getElementById("modeSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  mode=b.dataset.mode; document.querySelectorAll("#modeSeg .btn").forEach(x=>x.classList.toggle("on",x===b));
+  render3D();
+});
+document.getElementById("styleSel").onchange=e=>{styleName=e.target.value; render3D()};
+document.getElementById("spinBtn").onclick=e=>{
+  spinning=!spinning; e.currentTarget.classList.toggle("on",spinning);
+  (mode==="grid"?gridViewers:(overlayViewer?[overlayViewer]:[])).forEach(v=>v.spin(spinning?"y":false,0.6));
+};
+document.getElementById("resetBtn").onclick=()=>{
+  (mode==="grid"?gridViewers:(overlayViewer?[overlayViewer]:[])).forEach(v=>{v.zoomTo();v.render()});
+};
+
+/* =========================================================
+   Tabs / init
+   ========================================================= */
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===t));
+  document.getElementById("tab-table").classList.toggle("hidden",t!=="table");
+  document.getElementById("tab-3d").classList.toggle("hidden",t!=="3d");
+  if(t==="3d") requestAnimationFrame(render3D);
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+let rT; window.addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(()=>{if(!document.getElementById("tab-3d").classList.contains("hidden")) render3D()},250)});
+
+/* =========================================================
+   Generate / fold dialog
+   ========================================================= */
+const gv = id => document.getElementById(id);
+const G = {
+  veil: gv("genVeil"), prog: gv("genProg"), bar: document.querySelector("#genProg i"),
+  msg: gv("genMsg"), run: gv("genRun"), cancel: gv("genCancel"),
+  title: gv("sheetTitle"), sub: gv("sheetSub"), body: gv("sheetBody"), cardSeq: gv("cardSeq")
+};
+const GEN_BTN_HTML = gv("genBtn").innerHTML;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let dlgMode = "generate";      // "generate" | "fold"
+let foldTargets = [];
+let job = null;                // active run, null when idle
+
+/* ---- live read-outs ---- */
+const SLIDERS = [
+  ["gSteps","vSteps",v=>v], ["gTemp","vTemp",v=>(+v).toFixed(2)], ["gDiv","vDiv",v=>v+"%"],
+  ["fRecycle","vRecycle",v=>v], ["fSeeds","vSeeds",v=>v], ["fMin","vMin",v=>v],
+  ["gN","vN",v=>v]
+];
+SLIDERS.forEach(([sl,out,f])=>{
+  const el=gv(sl); el.addEventListener("input",()=>{ gv(out).textContent=f(el.value); syncFoldUI(); estimate(); });
+});
+["fRelax","fTempl","fRmsd"].forEach(id=>gv(id).addEventListener("change",estimate));
+["fAutoOn","fTopKOn"].forEach(id=>gv(id).addEventListener("change",()=>{ syncFoldUI(); estimate(); }));
+gv("fTopK").addEventListener("input", ()=>{ syncFoldUI(); estimate(); });
+gv("fTopK").addEventListener("change", ()=>{ clampTopK(); syncFoldUI(); estimate(); });
+function clampTopK(){
+  const n = +gv("gN").value;
+  let v = parseInt(gv("fTopK").value, 10);
+  if(!Number.isFinite(v)) v = 1;
+  gv("fTopK").value = Math.min(Math.max(1, v), n);
+}
+const topKValue = ()=> Math.min(+gv("gN").value, Math.max(1, parseInt(gv("fTopK").value,10) || 1));
+
+/* the whole folding card only exists when "Fold after generation" is on */
+function syncFoldUI(){
+  if(dlgMode==="fold"){
+    gv("cardFold").classList.remove("hidden");
+    gv("foldParams").classList.remove("hidden");
+    gv("autoSwt").classList.add("hidden");
+    gv("fAutoHint").classList.add("hidden");
+    gv("topkSwt").classList.add("hidden");
+    gv("fldTopKWrap").classList.add("hidden");
+    G.body.classList.add("one");
+    return;
+  }
+  const on = gv("fAutoOn").checked, topk = gv("fTopKOn").checked, n = +gv("gN").value;
+  gv("cardFold").classList.remove("hidden");
+  gv("autoSwt").classList.remove("hidden");
+  gv("fAutoHint").classList.remove("hidden");
+  gv("foldParams").classList.toggle("hidden", !on);
+  G.body.classList.remove("one");
+  gv("topkSwt").classList.remove("hidden");
+  gv("fldTopKWrap").classList.toggle("hidden", !topk);
+  gv("fTopK").max = n;
+  const k = topKValue();
+  gv("fAutoHint").textContent = !on
+    ? "Candidates land in the table as sequence-only — fold them later from the table."
+    : topk ? `Only the ${k} candidate${k===1?"":"s"} with the lowest perplexity will be folded.`
+           : `All ${n} candidates will be folded straight after sampling.`;
+}
+const fmtDur = sec => `${String(Math.floor(sec/60)).padStart(2,"0")}:${String(Math.round(sec%60)).padStart(2,"0")}`;
+function estimate(){
+  if(job) return;
+  const seeds=+gv("fSeeds").value, rec=+gv("fRecycle").value, relax=gv("fRelax").checked?1.3:1;
+  const perFold = seeds*(1+rec*0.18)*relax*11;
+  if(dlgMode==="fold"){
+    const m=foldTargets.length;
+    G.msg.textContent = `${m} sequence${m===1?"":"s"} to fold · estimated ≈ ${fmtDur(m*perFold)} on 1× A100`;
+    return;
+  }
+  const n=+gv("gN").value, on=gv("fAutoOn").checked, topk=gv("fTopKOn").checked;
+  const k = !on ? 0 : topk ? topKValue() : n;
+  G.msg.textContent = on
+    ? `${n} candidate${n===1?"":"s"}, ${k} folded · estimated ≈ ${fmtDur(n*1.4+k*perFold)} on 1× A100`
+    : `${n} sequence${n===1?"":"s"}, no folding · estimated ≈ ${fmtDur(n*1.4)} on 1× A100`;
+}
+
+/* ---- scaffold picker ---- */
+function fillScaffolds(){
+  const sc=gv("gScaffold"), prev=sc.value;
+  const refs = data.filter(d=>d.src==="real").sort((a,b)=>a.name.localeCompare(b.name));
+  sc.innerHTML = `<option value="">— de novo (no scaffold) —</option>` +
+    refs.map(d=>`<option value="${d.id}">${esc(d.name)} · ${d.uid}</option>`).join("");
+  const pre = anchors[0] ?? selected().filter(d=>d.src==="real")[0]?.id;
+  sc.value = (prev && [...sc.options].some(o=>o.value===prev)) ? prev : (pre!==undefined ? String(pre) : "");
+  scaffoldHint();
+}
+function scaffoldHint(){
+  const v=gv("gScaffold").value;
+  gv("gScaffoldHint").textContent = v===""
+    ? "Sequences sampled from the EC-conditioned prior with no starting structure."
+    : `New designs inherit the fold of ${data[+v].uid} (EC ${data[+v].ec}, ${data[+v].len} aa).`;
+}
+gv("gScaffold").addEventListener("change",scaffoldHint);
+
+/* ---- open / hide ---- */
+function openGen(){
+  if(job){ G.veil.classList.remove("hidden"); return; }
+  dlgMode="generate"; foldTargets=[];
+  G.title.textContent="Generate enzyme candidates";
+  G.sub.textContent="Sample sequences with ZymCTRL, then optionally fold them. Parameters are mock values for UI demonstration.";
+  G.cardSeq.classList.remove("hidden");
+  fillScaffolds(); syncFoldUI(); setIdleUI(); estimate();
+  G.veil.classList.remove("hidden");
+}
+function openFoldDialog(entries){
+  if(job){ G.veil.classList.remove("hidden"); return; }
+  foldTargets = entries.filter(e=>e.status==="seq");
+  if(!foldTargets.length) return;
+  dlgMode="fold";
+  G.title.textContent=`Fold ${foldTargets.length} selected sequence${foldTargets.length===1?"":"s"}`;
+  G.sub.textContent="Predict a structure for each selected sequence-only entry.";
+  G.cardSeq.classList.add("hidden");
+  syncFoldUI(); setIdleUI(); estimate();
+  G.veil.classList.remove("hidden");
+}
+const hideDialog = () => G.veil.classList.add("hidden");   // a run keeps going in the background
+gv("genBtn").onclick = openGen;
+gv("genClose").onclick = hideDialog;
+G.veil.addEventListener("click", e=>{ if(e.target===G.veil) hideDialog() });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") hideDialog() });
+G.cancel.onclick = ()=>{ if(job) job.cancel=true; else hideDialog(); };
+
+/* ---- run state UI ---- */
+function freeze(on){
+  G.veil.classList.toggle("running",on);
+  G.veil.querySelectorAll(".card input, .card select").forEach(el=>el.disabled=on);
+}
+function setIdleUI(){
+  freeze(false);
+  G.prog.classList.add("hidden"); G.bar.style.width="0";
+  G.run.disabled=false;
+  G.run.textContent = dlgMode==="fold" ? "Run folding" : "Run generation";
+  G.cancel.textContent = "Close";
+  gv("genBtn").innerHTML = GEN_BTN_HTML;
+}
+function updateRunUI(){
+  if(!job) return;
+  const pct = job.total ? Math.round(job.done/job.total*100) : 0;
+  G.prog.classList.remove("hidden"); G.bar.style.width=pct+"%";
+  G.msg.textContent = `${job.phaseLabel} ${job.done}/${job.total}`
+    + (job.rejected?` · ${job.rejected} below pLDDT cutoff`:"");
+  G.run.disabled=true; G.run.textContent = job.phaseLabel+"…";
+  G.cancel.textContent = "Cancel run";
+  gv("genBtn").innerHTML = `<span class="spin"></span>${job.phaseLabel} ${job.done}/${job.total}`;
+}
+
+/* ---- the run itself ---- */
+G.run.onclick = startRun;
+
+function readCfg(){
+  return {
+    n:+gv("gN").value, temp:+gv("gTemp").value, mut:(+gv("gDiv").value)/100,
+    model: gv("gModel").value.split(" ·")[0], scaffoldId: gv("gScaffold").value,
+    minP:+gv("fMin").value, topk: topKValue(),
+    foldMode: !gv("fAutoOn").checked ? "none" : (gv("fTopKOn").checked ? "topk" : "all"),
+    wantRmsd: gv("fRmsd").checked
+  };
+}
+
+async function startRun(){
+  if(job) return;
+  const kind = dlgMode, cfg = readCfg();
+  job = { kind, cancel:false, done:0, total:0, rejected:0, folded:0, phaseLabel:"Starting" };
+  freeze(true); updateRunUI();
+
+  let made = [];
+
+  if(kind==="generate"){
+    const scaffold = cfg.scaffoldId==="" ? null : data[+cfg.scaffoldId];
+    const startIdx = data.length;
+    job.total = cfg.n; job.phaseLabel = "Sampling";
+    for(let i=0;i<cfg.n;i++) data.push(makePlaceholder(scaffold, cfg.model));
+    showSrc.gen = true;
+    document.querySelector('#srcSeg [data-src="gen"]').classList.add("on");
+    refreshTable(); updateRunUI();
+
+    for(let i=0;i<cfg.n;i++){
+      await sleep(420 + Math.random()*700);
+      if(job.cancel) break;
+      materialize(data[startIdx+i], scaffold, cfg);
+      made.push(data[startIdx+i]);
+      job.done = i+1; renderBody(); updateRunUI();
+    }
+    if(job.cancel){
+      // placeholders never sampled are always a contiguous tail, so ids stay valid
+      let cut = data.length;
+      while(cut > startIdx && data[cut-1].status==="generating") cut--;
+      data.length = cut;
+    }
+    made.forEach(e=>e.sel=true);
+  } else {
+    made = foldTargets.filter(e=>e.status==="seq");
+  }
+
+  let toFold = [];
+  if(!job.cancel){
+    if(kind==="fold") toFold = made;
+    else if(cfg.foldMode==="all") toFold = made.slice();
+    else if(cfg.foldMode==="topk") toFold = made.slice().sort((a,b)=>a.ppl-b.ppl).slice(0,cfg.topk);
+  }
+
+  if(toFold.length){
+    job.phaseLabel="Folding"; job.done=0; job.total=toFold.length;
+    renderBody(); updateRunUI();
+    for(const e of toFold){
+      if(job.cancel) break;
+      e.status="folding"; renderBody(); updateRunUI();
+      await sleep(800 + Math.random()*1400);
+      if(job.cancel){ e.status="seq"; break; }
+      const plddt = +rng(58,98).toFixed(1);
+      if(plddt >= cfg.minP){ e.status="folded"; e.plddt=plddt; job.folded++; }
+      else { e.status="seq"; e.plddt=null; job.rejected++; }
+      job.done++; renderBody(); updateRunUI();
+    }
+  }
+  data.forEach(e=>{ if(e.status==="folding") e.status="seq" });
+
+  const cancelled=job.cancel, folded=job.folded, rejected=job.rejected;
+  job = null;
+  setIdleUI();
+
+  if(kind==="generate" && cfg.wantRmsd && cfg.scaffoldId!=="" && folded && !anchors.includes(+cfg.scaffoldId))
+    addAnchor(+cfg.scaffoldId);
+  else refreshTable();
+
+  G.msg.textContent = cancelled
+    ? `Cancelled — ${made.length} sequence${made.length===1?"":"s"} kept, ${folded} folded.`
+    : kind==="fold"
+      ? `${folded} structure${folded===1?"":"s"} predicted` + (rejected?` · ${rejected} below the pLDDT cutoff`:"") + "."
+      : `${made.length} candidate${made.length===1?"":"s"} generated, ${folded} folded`
+        + (rejected?` · ${rejected} below the pLDDT cutoff`:"") + ".";
+  if(!cancelled) setTimeout(()=>{ if(!job) hideDialog() }, 1600);
+}
+
+/* ---- entry construction ---- */
+function makePlaceholder(scaffold, model){
+  const famIdx = scaffold ? scaffold.fam : Math.floor(R()*FAM.length);
+  const F = FAM[famIdx];
+  return {
+    id: data.length, src:"gen", status:"generating", sel:false,
+    fam: famIdx, parent: scaffold ? scaffold.uid : null, model,
+    uid: uniqId("GX-",6), name: `${F.name} · sampling…`,
+    ec: F.ec, ecClass: F.ecClass, org: `${model} (de novo)`,
+    seq:"", len:null, mw:null, pi:null, km:null, kcat:null, eff:null,
+    topt:null, phopt:null, plddt:null, ppl:null,
+    seed: Math.floor(R()*1e9), noise: 1, color: PALETTE[data.length % PALETTE.length]
+  };
+}
+
+function materialize(e, scaffold, cfg){
+  const F = FAM[e.fam];
+  const base = scaffold || { len: F.baseLen, seq:"", pi:7, km:1, kcat:50, topt:40, phopt:7 };
+  const len = Math.max(60, Math.min(+gv("gSteps").value, (base.len || F.baseLen) + rint(-8,8)));
+  let seq = "";
+  for(let k=0;k<len;k++)
+    seq += (base.seq && k<base.seq.length && R() > cfg.mut*cfg.temp*0.8) ? base.seq[k] : randAA(R);
+  e.seq = "M" + seq.slice(1);
+  e.len = len;
+  designCounter[e.fam] = (designCounter[e.fam]||0)+1;
+  e.name = `${F.name} · design ${String(designCounter[e.fam]).padStart(2,"0")}`;
+  e.identity = +(100*(1-cfg.mut)).toFixed(0);
+  const jit = (v,f)=>v*Math.pow(10,rng(-f,f));
+  e.mw    = +(len*0.110).toFixed(1);
+  e.pi    = +Math.min(11,Math.max(3.5, base.pi + rng(-1,1))).toFixed(2);
+  e.km    = +jit(base.km,0.6).toFixed(3);
+  e.kcat  = +jit(base.kcat,0.7).toFixed(1);
+  e.eff   = e.kcat/e.km;
+  e.topt  = Math.round(base.topt + rng(-8,15));
+  e.phopt = +Math.min(10,Math.max(4, base.phopt + rng(-1,1))).toFixed(1);
+  // ZymCTRL reports a perplexity per sequence; lower = the model is more confident
+  e.ppl   = +Math.min(14, Math.max(1.02, rng(1.1,3.2) * (0.7 + cfg.temp*0.7) * (1 + cfg.mut*0.9))).toFixed(2);
+  e.noise = rng(0.25,1.4) * cfg.temp;
+  e.status = "seq";
+}
+
+document.getElementById("subtitle").textContent =
+  `Mock dataset · ${data.filter(d=>d.src==="real").length} reference + ${data.filter(d=>d.src==="gen").length} AI-generated enzymes · synthetic structures`;
+refreshTable();
+</script>
+</body>
+</html>
